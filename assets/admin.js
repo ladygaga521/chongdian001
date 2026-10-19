@@ -4,17 +4,24 @@
   var $ = function (id) { return document.getElementById(id); };
   var API_BASE = (window.API_BASE || '').replace(/\/+$/, '');
   var API = API_BASE + '/admin_api.php';
+
+  /* ---- Token（跨域部署时不能依赖 Cookie，改用 Token） ---- */
+  var TOKEN_KEY = 'pb_admin_token';
   var cur = { filter: 'all', q: '', page: 1, pages: 1, rows: [], refund_hour: 12 };
+  function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} }
 
   function req(action, data) {
-    var opt = { method: 'GET', credentials: 'same-origin' };
+    var opt = { method: 'GET', credentials: 'include', headers: {} };
+    var tk = getToken();
+    if (tk) { opt.headers['X-Admin-Token'] = tk; }
     if (data) {
       opt.method = 'POST';
-      opt.headers = { 'Content-Type': 'application/json' };
+      opt.headers['Content-Type'] = 'application/json';
       opt.body = JSON.stringify(data);
     }
     return fetch(API + '?action=' + action, opt).then(function (r) {
-      if (r.status === 401) { location.reload(); throw new Error('未登录'); }
+      if (r.status === 401) { setToken(''); showLogin(); throw new Error('未登录'); }
       return r.json();
     });
   }
@@ -78,8 +85,11 @@
   function loadOrders() {
     var url = API + '?action=orders&filter=' + encodeURIComponent(cur.filter) +
               '&page=' + cur.page + '&q=' + encodeURIComponent(cur.q);
-    fetch(url, { credentials: 'same-origin' }).then(function (r) {
-      if (r.status === 401) { location.reload(); return { ok: false }; }
+    var hdr = { credentials: 'include' };
+    var _tk = getToken();
+    if (_tk) { hdr.headers = { 'X-Admin-Token': _tk }; }
+    fetch(url, hdr).then(function (r) {
+      if (r.status === 401) { setToken(''); showLogin(); return { ok: false }; }
       return r.json();
     }).then(function (res) {
       if (!res.ok) return;
@@ -331,7 +341,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pass: pass })
       }).then(function (r) { return r.json(); }).then(function (res) {
-        if (res.ok) { location.reload(); }
+        if (res.ok) {
+          if (res.token) { setToken(res.token); }
+          location.reload();
+        }
         else { document.getElementById('loginMsg').textContent = res.msg || '登录失败'; }
       }).catch(function () { document.getElementById('loginMsg').textContent = '请求失败'; });
     });
@@ -353,25 +366,30 @@
   }
 
   /* ---------- 启动 ---------- */
-  fetch(API + '?action=me', { credentials: 'include' })
-    .then(function (r) { return r.json(); })
-    .then(function (res) {
-      if (res && res.login) {
-        showApp();
-        // 品牌名
-        fetch(API + '?action=settings', { credentials: 'include' }).then(function (r){return r.json();}).then(function(s){
-          if (s && s.ok && s.settings && s.settings.brand_name) {
-            var bn = document.getElementById('brandName');
-            if (bn) bn.textContent = s.settings.brand_name;
-          }
-        }).catch(function(){});
-        setupQR();
-        loadStats();
-        loadOrders();
-        setInterval(function () { loadStats(); }, 15000);
-      } else {
-        showLogin();
-      }
-    })
-    .catch(function () { showLogin(); });
+  (function () {
+    var opt = { credentials: 'include', headers: {} };
+    var tk = getToken();
+    if (tk) { opt.headers['X-Admin-Token'] = tk; }
+    fetch(API + '?action=me', opt)
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.login) {
+          showApp();
+          // 品牌名
+          req('settings').then(function (s) {
+            if (s && s.ok && s.settings && s.settings.brand_name) {
+              var bn = document.getElementById('brandName');
+              if (bn) bn.textContent = s.settings.brand_name;
+            }
+          }).catch(function () {});
+          setupQR();
+          loadStats();
+          loadOrders();
+          setInterval(function () { loadStats(); }, 15000);
+        } else {
+          showLogin();
+        }
+      })
+      .catch(function () { showLogin(); });
+  })();
 })();
