@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>共享充电宝管理后台</title>
+<link rel="stylesheet" href="assets/admin.css?v=20261010a">
+<script src="config.js"></script>
+</head>
+<body>
+
+<div id="loginWrap" class="login-wrap">
+  <form class="login-box" id="loginForm">
+    <h1>共享充电宝后台</h1>
+    <p>请输入管理密码登录</p>
+    <div class="field">
+      <label>管理密码</label>
+      <input type="password" id="loginPass" placeholder="默认 admin123" autocomplete="current-password">
+    </div>
+    <div class="actions"><button class="btn" style="width:100%;height:38px;background:#07c160;color:#fff;font-size:15px" type="submit">登 录</button></div>
+    <p style="margin-top:14px" id="loginMsg"></p>
+  </form>
+</div>
+
+<div id="appWrap" class="layout hidden">
+  <aside class="side">
+    <div class="brand"><span class="dot">&#9889;</span><span id="brandName">共享充电宝</span>管理后台</div>
+    <div class="nav-item active" data-tab="users">用户管理</div>
+    <div class="nav-item" data-tab="pay">支付通道</div>
+    <div class="nav-item" data-tab="qr">设备二维码</div>
+    <div class="nav-item" data-tab="set">系统设置</div>
+    <div class="foot" id="logout">退出登录</div>
+  </aside>
+
+  <main class="content">
+
+    <section id="tab-users">
+      <h2 class="page-title">用户管理</h2>
+      <p class="page-desc">展示扫码租借订单明细；「归还」按 12 小时规则退还押金，「关闭」强制结束并判定超时、押金不予退还，关闭/归还后用户再次扫码即可重新进入租借页面</p>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="panel">
+        <div class="toolbar">
+          <button class="chip active" data-filter="all">全部</button>
+          <button class="chip" data-filter="using">使用中</button>
+          <button class="chip" data-filter="done">已归还</button>
+          <button class="chip" data-filter="timeout">超时未退押金</button>
+          <div class="search">
+            <input id="q" placeholder="搜索订单号 / 用户ID / 设备编号">
+            <button id="btnSearch">查询</button>
+            <button class="ghost" id="btnRefresh">刷新</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>用户ID</th>
+                <th>扫码订单号</th>
+                <th>设备编号</th>
+                <th>使用开始时间</th>
+                <th>押金剩余退还时长</th>
+                <th>押金</th>
+                <th>状态</th>
+                <th>费用</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"><tr><td colspan="9" class="empty">加载中...</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="pager">
+          <span id="pageInfo">-</span>
+          <button id="prev">上一页</button>
+          <button id="next">下一页</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-pay" class="hidden">
+      <h2 class="page-title">支付通道</h2>
+      <p class="page-desc">扫码进入页面时系统自动识别扫码端：微信扫码走 <b>JSAPI 支付</b>，支付宝扫码走 <b>手机网站支付</b>。参数保存后立即生效</p>
+
+      <div class="panel">
+        <h3 style="font-size:15px;margin:0 0 12px">当前状态</h3>
+        <div id="payState" style="font-size:13px;color:#555;line-height:1.9">加载中...</div>
+      </div>
+
+      <form class="form" id="payForm">
+        <div class="panel">
+          <h3 style="font-size:15px;margin:0 0 12px">1. 支付模式</h3>
+          <div class="fgrid">
+            <div class="field">
+              <label>支付模式</label>
+              <select id="f_pay_channel">
+                <option value="demo">模拟支付（本地演示，无需任何参数）</option>
+                <option value="auto">自动识别（推荐，按扫码端自动选通道）</option>
+                <option value="wechat">仅微信 JSAPI 支付</option>
+                <option value="alipay">仅支付宝手机网站支付</option>
+                <option value="epay">彩虹易支付（聚合通道，支付宝/微信一套参数）</option>
+              </select>
+              <small>选「自动识别」后，微信扫码 → JSAPI，支付宝扫码 → 手机网站支付</small>
+            </div>
+            <div class="field">
+              <label>对外访问地址（回调用）</label>
+              <input id="f_pay_base_url" placeholder="留空则按当前访问地址推断">
+              <small>真实支付的回调地址必须是 <b>HTTPS + ICP 备案域名</b>，如 https://pay.example.com</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="wxBlock">
+          <h3 style="font-size:15px;margin:0 0 4px">2. 微信 JSAPI 支付</h3>
+          <p style="font-size:12px;color:#999;margin:0 0 12px">需要：服务号 AppID（已认证并开通 JSAPI 支付 + 网页授权域名）、商户号、API 证书</p>
+          <div class="fgrid">
+            <div class="field"><label>公众号 AppID</label><input id="f_wx_appid" placeholder="wx 开头，用于 JSAPI 与网页授权"></div>
+            <div class="field"><label>公众号 AppSecret</label><input id="f_wx_appsecret" placeholder="用于 code 换 openid"></div>
+            <div class="field"><label>微信商户号 MchID</label><input id="f_wx_mchid" placeholder="10 位数字"></div>
+            <div class="field"><label>商户 API 证书序列号</label><input id="f_wx_serial_no" placeholder="apiclient_cert.pem 的 serial_no"></div>
+            <div class="field"><label>APIv3 密钥（32 位）</label><input id="f_wx_apiv3_key" placeholder="商户平台设置的 32 位密钥"></div>
+            <div class="field"><label>微信支付平台证书/公钥</label><input id="f_wx_platform_pubkey" placeholder="用于回调解密前验签，可留空"></div>
+            <div class="field" style="grid-column:1/-1">
+              <label>商户 API 私钥（apiclient_key.pem 内容）</label>
+              <textarea id="f_wx_private_key" rows="4" placeholder="-----BEGIN PRIVATE KEY----- ... 整段粘贴"></textarea>
+              <small>请勿上传到公开仓库；存储在本机数据库中</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="aliBlock">
+          <h3 style="font-size:15px;margin:0 0 4px">3. 支付宝手机网站支付</h3>
+          <p style="font-size:12px;color:#999;margin:0 0 12px">需要：开放平台网页/移动应用 AppID、已开通「手机网站支付」、RSA2 密钥对</p>
+          <div class="fgrid">
+            <div class="field"><label>支付宝 AppID</label><input id="f_ali_appid" placeholder="20 位数字"></div>
+            <div class="field"><label>支付宝公钥</label><input id="f_ali_public_key" placeholder="开放平台「支付宝公钥」文本"></div>
+            <div class="field" style="grid-column:1/-1">
+              <label>应用私钥（RSA2）</label>
+              <textarea id="f_ali_private_key" rows="4" placeholder="-----BEGIN PRIVATE KEY----- ... 整段粘贴"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="epayBlock" style="display:none">
+          <h3 style="font-size:15px;margin:0 0 4px">4. 彩虹易支付</h3>
+          <p style="font-size:12px;color:#999;margin:0 0 12px">
+            聚合支付网关，一套参数同时收支付宝和微信，无需单独申请微信/支付宝商户。
+            需要：易支付商户 ID（pid）、商户密钥（key）、网关地址
+          </p>
+          <div class="fgrid">
+            <div class="field" style="grid-column:1/-1">
+              <label>网关地址</label>
+              <input id="f_epay_gateway" placeholder="如 https://pay.example.com（结尾不要带斜杠）">
+              <small>易支付站点首页地址，代码会自动拼 <code>/submit.php</code> 和 <code>/api.php</code></small>
+            </div>
+            <div class="field"><label>商户 ID（pid）</label><input id="f_epay_pid" placeholder="易支付后台的商户 ID"></div>
+            <div class="field"><label>商户密钥（key）</label><input id="f_epay_key" placeholder="用于 MD5 签名，易支付后台获取"></div>
+            <div class="field">
+              <label>默认支付方式</label>
+              <select id="f_epay_type">
+                <option value="auto">自动识别（微信扫码→微信，支付宝/其他→支付宝）</option>
+                <option value="alipay">固定支付宝</option>
+                <option value="wxpay">固定微信</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn" type="button" id="btnEpayTest" style="background:#2b6de8;color:#fff;height:34px;padding:0 18px;font-size:13px">测试连接</button>
+            <span id="epayTestMsg" style="font-size:13px;color:#888">点一下会请求易支付网关，验证商户 ID 和密钥是否正确</span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" style="background:#07c160;color:#fff;height:38px;padding:0 26px;font-size:14px" type="submit">保存支付配置</button>
+          <span id="payMsg" style="margin-left:12px;color:#07c160;font-size:13px"></span>
+        </div>
+      </form>
+
+      <div class="panel">
+        <h3 style="font-size:15px;margin:0 0 10px">上线前请确认</h3>
+        <ol style="font-size:13px;color:#666;line-height:2;padding-left:20px;margin:0">
+          <li>域名已 <b>HTTPS 备案</b>，且证书有效（微信/支付宝强制要求）。</li>
+          <li>微信：服务号已完成认证 → 开通「JSAPI 支付」→ 配置「网页授权域名」和「支付目录」为本系统域名。</li>
+          <li>支付宝：应用已开通「手机网站支付」→ 设置「应用网关地址」「授权回调地址」为本系统地址。</li>
+          <li>彩虹易支付：把商户 ID / 密钥填好，异步通知地址填 <code id="cbEpay">-</code> 并确保公网可达。</li>
+          <li>回调地址默认为 <code id="cbWechat">-</code> 和 <code id="cbAlipay">-</code>，需能被公网访问。</li>
+          <li>本地调试只能用「模拟支付」；真实支付必须部署到备案域名下。</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="tab-qr" class="hidden">
+      <h2 class="page-title">设备二维码</h2>
+      <p class="page-desc">用户微信/相机扫码后进入租借页面，可打印张贴在机柜上</p>
+      <div class="qr-card">
+        <img id="qrImg" src="" alt="扫码租借">
+        <div class="name">扫码租借充电宝</div>
+        <div class="sub" id="qrSub">共享充电宝</div>
+        <div class="urlbox" id="qrUrl">-</div>
+        <div style="margin-top:14px;display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-line" id="copyUrl">复制链接</button>
+          <button class="btn btn-line" onclick="window.print()">打印二维码</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-set" class="hidden">
+      <h2 class="page-title">系统设置</h2>
+      <p class="page-desc">修改设备信息与计费规则，修改后立即生效</p>
+      <form class="form" id="setForm">
+        <div class="fgrid">
+          <div class="field"><label>站点名称</label><input id="f_brand_name" maxlength="30">
+            <small>手机扫码页标题、后台标题、二维码副标题都会用它</small></div>
+          <div class="field"><label>设备编号</label><input id="f_device_id"></div>
+          <div class="field"><label>所属门店</label><input id="f_store"></div>
+          <div class="field"><label>押金金额（元）</label><input id="f_deposit" type="number" step="0.01"></div>
+          <div class="field"><label>押金退还时限（小时）</label><input id="f_refund_hour" type="number" step="0.5">
+            <small>超过该时长押金不予退还，例如 12 表示12小时</small></div>
+          <div class="field"><label>快充计费（元/小时）</label><input id="f_hourly_fee" type="number" step="0.01"></div>
+          <div class="field"><label>24小时封顶（元）</label><input id="f_cap24" type="number" step="0.01"></div>
+          <div class="field"><label>总封顶（元）</label><input id="f_cap_total" type="number" step="0.01"></div>
+          <div class="field"><label>后台登录密码</label><input id="f_admin_pass" type="password" placeholder="留空则不修改">
+            <small>至少4位，留空保持不变</small></div>
+        </div>
+        <div class="actions">
+          <button class="btn" style="background:#07c160;color:#fff;height:38px;padding:0 26px;font-size:14px" type="submit">保存设置</button>
+          <span id="setMsg" style="margin-left:12px;color:#07c160;font-size:13px"></span>
+        </div>
+      </form>
+    </section>
+
+  </main>
+</div>
+
+<script src="assets/admin.js?v=20261010c"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>共享充电宝</title>
+<link rel="stylesheet" href="assets/mobile.css?v=20261010a">
+<script src="config.js"></script>
+</head>
+<body>
+
+<div class="wx-nav">
+  <span class="back">&#8249;</span>
+  <span class="wx-title" id="brandTitle">共享充电宝</span>
+  <span class="wx-caps"><i class="dots">&#8226;&#8226;&#8226;</i><i class="o"></i></span>
+</div>
+
+<main>
+
+  <!-- ================= 租借界面 ================= -->
+  <section id="view-rent" class="view hidden">
+    <div class="hero">超级快充</div>
+
+    <div class="battery-wrap">
+      <div class="battery">
+        <i class="cap"></i>
+        <i class="body"><i class="fill"></i></i>
+      </div>
+    </div>
+
+    <h1 class="slogan">省时省钱-快充快还</h1>
+
+    <div class="pills">
+      <span class="pill">快充 <b>30</b> 分钟内归还免费</span>
+      <span class="pill">快充计费规则 <b id="pillFee">1</b> 元/小时</span>
+    </div>
+
+    <div class="notice">
+      快充不足1小时按1小时计算,24小时内封顶<span id="cap24Txt">30</span>元;总封顶<span id="capTotal">98</span>元，
+      押金<span id="depTxt">99</span>元，超过<span id="refHourTxt">12</span>小时押金不予退还，按时归还押金全额退回。
+    </div>
+
+    <div class="meta">
+      <p>设备编号 <b id="deviceId">-</b></p>
+      <p>所属门店：<span id="storeName">-</span></p>
+    </div>
+
+    <button class="btn-main" id="btnRent">免押金租借</button>
+
+    <div class="pay-score"><i class="wx-icon">&#10003;</i> 微信支付分｜550及以上优享</div>
+
+    <label class="agree">
+      <input type="checkbox" id="agreeChk" checked>
+      <span>勾选同意<u>《用户隐私协议》</u>与<u>《委托扣款授权书》</u></span>
+    </label>
+  </section>
+
+  <!-- ================= 使用中界面 ================= -->
+  <section id="view-using" class="view hidden">
+    <div class="using-head">
+      <div class="using-title">充电宝使用中</div>
+      <div class="using-sub">用完请放回任意归还口，押金按规则退还</div>
+    </div>
+
+    <div class="chg">
+      <div class="battery">
+        <i class="cap"></i>
+        <i class="body"><i class="fill"></i><i class="bolt">&#9889;</i></i>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="count-num" id="countdown">--:--:--</div>
+      <div class="progress"><i id="progressBar"></i></div>
+    </div>
+
+    <div class="card">
+      <div class="row"><span class="k">扫码订单号</span><span class="v mono" id="uOrderNo">-</span></div>
+      <div class="row"><span class="k">使用开始时间</span><span class="v" id="uStart">-</span></div>
+      <div class="row"><span class="k">已使用时长</span><span class="v" id="uUsed">-</span></div>
+      <div class="row"><span class="k">预估费用</span><span class="v" id="uFee">-</span></div>
+      <div class="row"><span class="k">押金</span><span class="v" id="uDeposit">-</span></div>
+      <div class="row"><span class="k">设备编号</span><span class="v" id="uDevice">-</span></div>
+      <div class="row"><span class="k">所属门店</span><span class="v" id="uStore">-</span></div>
+    </div>
+
+    <p class="tips">快充不足1小时按1小时计算，24小时内封顶30元；总封顶98元。超过<span id="refHourTxt2">12</span>小时未归还，押金<span id="depTxt2">99</span>元不予退还。</p>
+
+    <button class="btn-main" id="btnReturn" disabled>如果归还请正确插入机器</button>
+  </section>
+
+</main>
+
+<div id="payMask" class="mask hidden">
+  <div class="pay" id="payPanel"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="assets/mobile.js?v=20261010d"></script>
+</body>
+</html>
